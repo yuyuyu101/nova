@@ -122,6 +122,14 @@ def import_rbd_image(path, *args):
     pass
 
 
+def create_rbd_image(pool, name, size, **kwargs):
+    pass
+
+
+def rbd_image_exists(pool, name):
+    pass
+
+
 def volume_group_free_space(vg):
     pass
 

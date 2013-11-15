@@ -516,12 +516,14 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def post_live_migration(self, ctxt, instance_ref, block_device_info):
+    def post_live_migration(self, ctxt, instance_ref, block_device_info,
+                            migrate_data=None):
         """Post operation of live migration at source host.
 
-        :param ctxt: security contet
-        :instance_ref: instance object that was migrated
-        :block_device_info: instance block device information
+        :params ctxt: security context
+        :params instance_ref: instance object that was migrated
+        :params block_device_info: instance block device information
+        :params migrate_data: implementation specific params.
         """
         pass
 

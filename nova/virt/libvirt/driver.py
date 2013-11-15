@@ -3943,29 +3943,42 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_shared_storage_test_file(self):
         """Makes tmpfile under CONF.instances_path."""
-        dirpath = CONF.instances_path
-        fd, tmp_file = tempfile.mkstemp(dir=dirpath)
-        LOG.debug(_("Creating tmpfile %s to notify to other "
-                    "compute nodes that they should mount "
-                    "the same storage.") % tmp_file)
-        os.close(fd)
-        return os.path.basename(tmp_file)
+        test_filename = None
+        if CONF.libvirt_images_type == 'rbd':
+            tmp_image = utils.generate_uid('live-migration', size=16)
+            pool = CONF.libvirt_images_rbd_pool
+            libvirt_utils.create_rbd_image(pool, tmp_image, 1)
+            test_filename = tmp_image
+        else:
+            dirpath = CONF.instances_path
+            fd, tmp_file = tempfile.mkstemp(dir=dirpath)
+            LOG.debug(_("Creating tmpfile %s to notify to other "
+                        "compute nodes that they should mount "
+                        "the same storage.") % tmp_file)
+            os.close(fd)
+            test_filename = os.path.basename(tmp_file)
+        return test_filename
 
     def _check_shared_storage_test_file(self, filename):
         """Confirms existence of the tmpfile under CONF.instances_path.
 
         Cannot confirm tmpfile return False.
         """
-        tmp_file = os.path.join(CONF.instances_path, filename)
-        if not os.path.exists(tmp_file):
-            return False
+        if CONF.libvirt_images_type == 'rbd':
+            return libvirt_utils.rbd_image_exists(CONF.libvirt_images_rbd_pool,
+                                                  filename)
         else:
-            return True
+            tmp_file = os.path.join(CONF.instances_path, filename)
+            return os.path.exists(tmp_file)
 
     def _cleanup_shared_storage_test_file(self, filename):
         """Removes existence of the tmpfile under CONF.instances_path."""
-        tmp_file = os.path.join(CONF.instances_path, filename)
-        os.remove(tmp_file)
+        if CONF.libvirt_images_type == 'rbd':
+            libvirt_utils.remove_rbd_volumes(CONF.libvirt_images_rbd_pool,
+                                             filename)
+        else:
+            tmp_file = os.path.join(CONF.instances_path, filename)
+            os.remove(tmp_file)
 
     def ensure_filtering_rules_for_instance(self, instance, network_info,
                                             time_module=None):
@@ -4144,6 +4157,23 @@ class LibvirtDriver(driver.ComputeDriver):
             # following normal way.
             self._fetch_instance_kernel_ramdisk(context, instance)
 
+        if is_shared_storage and CONF.libvirt_images_type == 'rbd':
+            if instance_relative_path:
+                instance_dir = os.path.join(CONF.instances_path,
+                                            instance_relative_path)
+            else:
+                instance_dir = libvirt_utils.get_instance_path(instance)
+            if not os.path.exists(instance_dir):
+                os.mkdir(instance_dir)
+            self._chown_console_log_for_instance(instance)
+            # Touch the console.log file, required by libvirt.
+            console_file = self._get_console_log_path(instance)
+            libvirt_utils.file_open(console_file, 'a').close()
+
+            # if image has kernel and ramdisk, just download
+            # following normal way.
+            self._fetch_instance_kernel_ramdisk(context, instance)
+
         # Establishing connection to volume server.
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
@@ -4221,7 +4251,22 @@ class LibvirtDriver(driver.ComputeDriver):
         # following normal way.
         self._fetch_instance_kernel_ramdisk(context, instance)
 
-    def post_live_migration(self, context, instance, block_device_info):
+    def post_live_migration(self, context, instance, block_device_info,
+                            migrate_data=None):
+        # Clean instance path
+        is_shared_storage = True
+        instance_relative_path = None
+        if migrate_data:
+            is_shared_storage = migrate_data.get('is_shared_storage', True)
+            instance_relative_path = migrate_data.get('instance_relative_path')
+        if is_shared_storage and CONF.libvirt_images_type == 'rbd':
+            if instance_relative_path:
+                instance_dir = os.path.join(CONF.instances_path,
+                                            instance_relative_path)
+            else:
+                instance_dir = libvirt_utils.get_instance_path(instance)
+            if os.path.exists(instance_dir):
+                shutil.rmtree(instance_dir)
         # Disconnect from volume server
         block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)

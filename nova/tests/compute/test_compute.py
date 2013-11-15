@@ -4593,10 +4593,13 @@ class ComputeTestCase(BaseTestCase):
             network_migrate_instance_start, post_live_migration_at_destination,
             unplug_vifs, setup_networks_on_host
         ):
-            self.compute._post_live_migration(c, inst_ref, dest)
+            migrate_data = {'is_shared_storage': True}
+            self.compute._post_live_migration(c, inst_ref, dest,
+                                              migrate_data=migrate_data)
 
             post_live_migration.assert_has_calls([
-                mock.call(c, inst_ref, {'block_device_mapping': []})])
+                mock.call(c, inst_ref, {'block_device_mapping': []},
+                          migrate_data=migrate_data)])
             unfilter_instance.assert_has_calls([mock.call(inst_ref, [])])
             migration = {'source_compute': srchost,
                          'dest_compute': dest, }

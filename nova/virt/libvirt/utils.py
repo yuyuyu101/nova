@@ -272,6 +272,30 @@ def list_rbd_volumes(pool):
     return [line.strip() for line in out.splitlines()]
 
 
+def create_rbd_image(pool, name, size, **kwargs):
+    """Create a image in given ceph pool.
+
+    :param name: image name
+    :param pool: ceph pool name
+    :param size: image size (MB)
+    """
+    rbd_create = ('rbd', '-p', pool, 'create', name, '--size', size)
+    try:
+        execute(*rbd_create, **kwargs)
+    except processutils.ProcessExecutionError:
+        LOG.warn(_("rbd create %(name)s in pool %(pool)s failed"),
+                 {'name': name, 'pool': pool})
+
+
+def rbd_image_exists(pool, image_name):
+    """Check if specified image exists in given ceph pool.
+
+    :param pool: ceph pool name
+    """
+    rbd_images = list_rbd_volumes(pool)
+    return image_name in rbd_images
+
+
 def remove_rbd_volumes(pool, *names):
     """Remove one or more rbd volume."""
     for name in names:
