@@ -1419,6 +1419,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                      expected_state=task_states.IMAGE_PENDING_UPLOAD)
+
+            if (CONF.libvirt_images_rbd_clone_image and
+                    CONF.libvirt_images_type == 'rbd'):
+                location = 'rbd://%s/%s/%s/%s' % (snapshot_backend.get_fsid(),
+                                                  snapshot_backend.pool,
+                                                  snapshot_backend.rbd_name,
+                                                  snapshot_name)
+                metadata['location'] = location
+                image_service.update(context, image_href, metadata)
+                return
+
             with libvirt_utils.file_open(out_path) as image_file:
                 image_service.update(context,
                                      image_href,

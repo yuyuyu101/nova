@@ -66,6 +66,9 @@ __imagebackend_opts = [
     cfg.StrOpt('libvirt_images_rbd_ceph_conf',
             default='',  # default determined by librados
             help='path to the ceph configuration file to use'),
+    cfg.BoolOpt('libvirt_images_rbd_clone_image',
+            default=False,
+            help='Nova clone glance image in rbd'),
         ]
 
 CONF = cfg.CONF
@@ -663,8 +666,11 @@ class Rbd(Image):
         pass
 
     def snapshot_extract(self, target, out_format):
-        snap = 'rbd:%s/%s' % (self.pool, self.rbd_name)
-        images.convert_image(snap, target, out_format)
+        with RBDVolumeProxy(self, self.rbd_name) as vol:
+            vol.create_snap(self.snapshot_name)
+            if (CONF.libvirt_images_rbd_clone_image and
+                    self._supports_layering()):
+                vol.protect_snap(self.snapshot_name)
 
     def snapshot_delete(self):
         pass
