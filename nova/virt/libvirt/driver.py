@@ -1422,7 +1422,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if (CONF.libvirt_images_rbd_clone_image and
                     CONF.libvirt_images_type == 'rbd'):
-                location = 'rbd://%s/%s/%s/%s' % (snapshot_backend.get_fsid(),
+                location = 'rbd://%s/%s/%s/%s' % (snapshot_backend._get_fsid(),
                                                   snapshot_backend.pool,
                                                   snapshot_backend.rbd_name,
                                                   snapshot_name)
