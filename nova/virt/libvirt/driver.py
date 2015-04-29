@@ -284,6 +284,7 @@ libvirt_volume_drivers = [
     'scality=nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
     'gpfs=nova.virt.libvirt.volume.LibvirtGPFSVolumeDriver',
     'quobyte=nova.virt.libvirt.volume.LibvirtQuobyteVolumeDriver',
+    'share=nova.virt.libvirt.volume.LibvirtFileVolumeDriver',
 ]
 
 
@@ -1063,7 +1064,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     raise exception.DeviceIsBusy(device=disk_dev)
 
             with excutils.save_and_reraise_exception():
-                self._disconnect_volume(connection_info, disk_dev)
+                self.detach_volume_disconnect_volume(connection_info, disk_dev)
 
     def _swap_volume(self, domain, disk_path, new_path, resize_to):
         """Swap existing disk with a new block device."""
@@ -1150,6 +1151,17 @@ class LibvirtDriver(driver.ComputeDriver):
         if node is not None:
             return etree.tostring(node)
 
+    @staticmethod
+    def _get_share_xml(xml, device):
+        """Returns the xml for the disk mounted at device."""
+        try:
+            doc = etree.fromstring(xml)
+        except Exception:
+            return None
+        node = doc.find("./devices/filessystem/target[@dir='%s'].." % device)
+        if node is not None:
+            return etree.tostring(node)
+
     def _get_existing_domain_xml(self, instance, network_info,
                                  block_device_info=None):
         try:
@@ -1173,7 +1185,10 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_dev = mountpoint.rpartition("/")[2]
         try:
             virt_dom = self._host.get_domain(instance)
-            xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
+            if connection_info['driver_volume_type'] == 'manila':
+                xml = self._get_share_xml(virt_dom.XMLDesc(0), disk_dev)
+            else:
+                xml = self._get_disk_xml(virt_dom.XMLDesc(0), disk_dev)
             if not xml:
                 raise exception.DiskNotFound(location=disk_dev)
             else:

@@ -289,6 +289,7 @@ class VolumeAttachmentController(wsgi.Controller):
             msg = _("volumeId must be specified.")
             raise exc.HTTPBadRequest(explanation=msg)
         device = body['volumeAttachment'].get('device')
+        device_type = body['volumeAttachment'].get('device_type', "block")
 
         self._validate_volume_id(volume_id)
 
@@ -302,7 +303,8 @@ class VolumeAttachmentController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, server_id)
         try:
             device = self.compute_api.attach_volume(context, instance,
-                                                    volume_id, device)
+                                                    volume_id, device,
+                                                    device_type)
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
@@ -317,6 +319,7 @@ class VolumeAttachmentController(wsgi.Controller):
         attachment['serverId'] = server_id
         attachment['volumeId'] = volume_id
         attachment['device'] = device
+        attachment['device_type'] = device_type
 
         # NOTE(justinsb): And now, we have a problem...
         # The attach is async, so there's a window in which we don't see

@@ -182,6 +182,7 @@ class DriverEphemeralBlockDevice(DriverBlockDevice):
         return legacy_bdm
 
 
+
 class DriverVolumeBlockDevice(DriverBlockDevice):
     _legacy_fields = set(['connection_info', 'mount_device',
                           'delete_on_termination'])

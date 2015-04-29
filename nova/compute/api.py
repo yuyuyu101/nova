@@ -2998,9 +2998,10 @@ class API(base.Base):
             context, instance, device, volume_id, disk_bus=disk_bus,
             device_type=device_type)
         try:
-            volume = self.volume_api.get(context, volume_id)
-            self.volume_api.check_attach(context, volume, instance=instance)
-            self.volume_api.reserve_volume(context, volume_id)
+            if device_type != 'share':
+                volume = self.volume_api.get(context, volume_id)
+                self.volume_api.check_attach(context, volume, instance=instance)
+                self.volume_api.reserve_volume(context, volume_id)
             self.compute_rpcapi.attach_volume(context, instance=instance,
                     volume_id=volume_id, mountpoint=device, bdm=volume_bdm)
         except Exception:

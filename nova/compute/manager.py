@@ -672,6 +672,7 @@ class ComputeManager(manager.Manager):
         self.virtapi = ComputeVirtAPI(self)
         self.network_api = network.API()
         self.volume_api = volume.API()
+        self.share_api = volume.manila.API()
         self.image_api = image.API()
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
@@ -4794,7 +4795,10 @@ class ComputeManager(manager.Manager):
                   'mountpoint': bdm['mount_device']},
                  context=context, instance=instance)
         try:
-            bdm.attach(context, instance, self.volume_api, self.driver,
+            api = self.volume_api
+            if bdm.device_type == 'share':
+                api = self.share_api
+            bdm.attach(context, instance, api, self.driver,
                        do_check_attach=False, do_driver_attach=True)
         except Exception:
             with excutils.save_and_reraise_exception():

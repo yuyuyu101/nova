@@ -1589,3 +1589,16 @@ class LibvirtQuobyteVolumeDriver(LibvirtBaseVolumeDriver):
         """
         return os.path.join(CONF.libvirt.quobyte_mount_point_base,
                             utils.get_hash_str(quobyte_volume))
+
+
+class LibvirtFileVolumeDriver(LibvirtBaseVolumeDriver):
+    """Class for file volume drivers."""
+    def __init__(self, connection):
+        self.connection = connection
+
+    def get_config(self, connection_info, disk_info):
+        """Returns xml for libvirt."""
+        conf = vconfig.LibvirtConfigGuestFilesys()
+        properties = connection_info['data']
+        conf.source_dir = properties['target_dir']
+        return conf

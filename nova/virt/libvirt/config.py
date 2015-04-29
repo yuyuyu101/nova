@@ -1053,11 +1053,14 @@ class LibvirtConfigGuestFilesys(LibvirtConfigGuestDevice):
         self.target_dir = "/"
         self.driver_type = "loop"
         self.driver_format = "raw"
+        self.access_mode = "squashed"
+        self.driver_cache = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestFilesys, self).format_dom()
 
         dev.set("type", self.source_type)
+        dev.set("access_mode", self.access_mode)
 
         if self.source_type == "file":
             dev.append(etree.Element("driver", type = self.driver_type,
